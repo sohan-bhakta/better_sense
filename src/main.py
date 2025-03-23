@@ -75,6 +75,10 @@ class DashboardData(BaseModel):
     lineXAxisName: str
     lineYAxisName: str
     lineSeries: List[LineSeriesData]
+    # New fields to display model results
+    recommendedGamblingBudget: float
+    riskScore: float
+    budgetPercentage: float
 
 # -----------------------
 # Dashboard Endpoint
@@ -108,6 +112,10 @@ def get_dashboard_data():
                 {"data": [2, 4, 6, 10], "area": True},
                 {"data": [0, 2, 4, 5], "area": True},
             ],
+            # Default values for model results
+            "recommendedGamblingBudget": 0.0,
+            "riskScore": 3.5,
+            "budgetPercentage": 0.0,
         }
 # Otherwise, we have user_data. Let's map it to the model's expected keys
     # According to your snippet, the model expects:
@@ -129,44 +137,98 @@ def get_dashboard_data():
     prediction = model.predict(df)  # e.g. might return a list or array
 
     print(prediction)
-# We'll assume it's a single float or numeric for recommended gambling budget
+    # We'll assume it's a single float or numeric for recommended gambling budget
     recommended_budget = round(float(prediction[0]), 2)
+    
+    # Calculate budget as percentage of income
+    budget_percentage = round((recommended_budget / user_data.income) * 100, 1) if user_data.income > 0 else 0
+    
+    # Generate a risk score based on financial factors
+    # This is a simplified example - you might have a more sophisticated calculation
+    risk_score = calculate_risk_score(user_data)
 
     # Example derived fields
     leftover = user_data.income - user_data.monthlySpending
+
+    # Update the pros and cons based on the model output
+    pros = [
+        "High potential return",
+        f"Gambles: {user_data.gamblingFrequency}",
+        "Supports long-term goals"
+    ]
+    
+    cons = [
+        "Potential loss of savings",
+        "Requires consistent tracking",
+        user_data.gamblingHistory,
+    ]
+    
+    # Add model-specific insights
+    if recommended_budget > 0:
+        pros.append(f"Model recommends {budget_percentage}% of income for gambling")
+    else:
+        cons.append("Model suggests avoiding gambling at this time")
 
     return {
         "userName": user_data.name,
         "projectedMonthlyIncome": user_data.income,
         "monthlyExpenses": user_data.monthlySpending,
         "dependents": user_data.dependents,
-        "pros": [
-            "High potential return",
-            f"Gambles: {user_data.gamblingFrequency}",
-            "Supports long-term goals"
-        ],
-        "cons": [
-            "Potential loss of savings",
-            "Requires consistent tracking",
-            user_data.gamblingHistory,
-        ],
+        "pros": pros,
+        "cons": cons,
         "pieData": [
             {"id": 0, "value": user_data.savings, "label": "Savings"},
             {"id": 1, "value": user_data.monthlySpending, "label": "Spending"},
+            {"id": 2, "value": recommended_budget, "label": "Recommended Gambling Budget"},
             {
-                "id": 2,
-                "value": leftover - user_data.savings if leftover > user_data.savings else 0,
+                "id": 3,
+                "value": leftover - user_data.savings - recommended_budget if leftover > (user_data.savings + recommended_budget) else 0,
                 "label": "Leftover",
             },
         ],
         "barLabels": ["Debt", "Networth", "Age"],
         "barLabelName": "Most Significant Features",
         "barYAxisName": "Risk",
-        "barSeries": [{"data": [4, 3, 6]}],
+        "barSeries": [{"data": [risk_score * 0.8, risk_score * 0.6, risk_score * 0.9]}],
         "lineLabels": [1, 2, 3, 4],
         "lineXAxisName": "Weeks",
         "lineYAxisName": "Gamble ($)",
         "lineSeries": [
-            {"data": [2, 4, 6, 10], "area": True},
-            {"data": [0, 2, 4, 5], "area": True},
-        ],    }
+            {"data": [recommended_budget * 0.5, recommended_budget * 0.75, recommended_budget, recommended_budget * 1.1], "area": True},
+            {"data": [0, recommended_budget * 0.3, recommended_budget * 0.6, recommended_budget * 0.8], "area": True},
+        ],
+        # Include model results
+        "recommendedGamblingBudget": recommended_budget,
+        "riskScore": risk_score,
+        "budgetPercentage": budget_percentage,
+    }
+
+def calculate_risk_score(user_data: OnboardingData) -> float:
+    """
+    Calculate a risk score based on user financial data
+    Higher score = higher risk tolerance
+    """
+    risk_score = 5.0  # Base score
+    
+    # Adjust based on income (higher income = can take more risk)
+    if user_data.income > 10000:
+        risk_score += 2
+    elif user_data.income > 5000:
+        risk_score += 1
+    
+    # Adjust based on debt ratio
+    debt_to_income = user_data.debt / user_data.income if user_data.income > 0 else 999
+    if debt_to_income > 0.5:
+        risk_score -= 2
+    elif debt_to_income > 0.3:
+        risk_score -= 1
+    
+    # Adjust based on savings
+    if user_data.savings < user_data.monthlySpending:
+        risk_score -= 1
+    
+    # Adjust based on dependents
+    risk_score -= user_data.dependents * 0.5
+    
+    # Ensure score is within range
+    return max(1, min(10, risk_score))
