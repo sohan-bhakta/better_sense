@@ -2,8 +2,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
-
+import pickle
+import pandas as pd
+import joblib
 app = FastAPI()
+
+# 1) Load the model globally
+with open("gambling_allocation_model.pkl", "rb") as f:
+    model = joblib.load(f)
 
 app.add_middleware(
     CORSMiddleware,
@@ -13,7 +19,7 @@ app.add_middleware(
 )
 
 # -----------------------
-#  Onboarding Models
+# Onboarding Models
 # -----------------------
 class OnboardingData(BaseModel):
     name: str
@@ -30,18 +36,16 @@ class OnboardingData(BaseModel):
     gamblingHistory: str
 
 # We'll store the most recent onboarding data in memory.
-# In production, you'd store it in a database.
 app.state.onboarded_data: Optional[OnboardingData] = None
 
 @app.post("/onboarding")
 async def receive_onboarding(data: OnboardingData):
     print("Received onboarding data:", data.dict())
-    # Save in memory for later use
     app.state.onboarded_data = data
     return {"message": "Data received successfully"}
 
 # -----------------------
-#   Dashboard Models
+# Dashboard Models
 # -----------------------
 class PieData(BaseModel):
     id: int
@@ -73,77 +77,96 @@ class DashboardData(BaseModel):
     lineSeries: List[LineSeriesData]
 
 # -----------------------
-#   Dashboard Endpoint
+# Dashboard Endpoint
 # -----------------------
 @app.get("/api/dashboard-data", response_model=DashboardData)
 def get_dashboard_data():
-    """
-    1) Attempt to read user data from memory (if they've onboarded).
-    2) Fill in the JSON with either user-provided values or fallback defaults.
-    3) Return a complete DashboardData object.
-    """
-
     user_data = app.state.onboarded_data
 
-    # If the user hasn't onboarded yet, or certain fields are empty, default them.
-    # We'll do a quick helper to safely pick a value or default.
-    def pick(field, default):
-        if user_data is not None:
-            val = getattr(user_data, field, None)
-            if val is not None:
-                return val
-        return default
+    # If no user data, return defaults
+    if not user_data:
+        return {
+            "userName": "Guest",
+            "projectedMonthlyIncome": 8500,
+            "monthlyExpenses": 2300,
+            "dependents": 0,
+            "pros": ["High potential return", "Gambles: Unknown", "Supports long-term goals"],
+            "cons": ["Potential loss of savings", "Requires consistent tracking", "No History Provided"],
+            "pieData": [
+                {"id": 0, "value": 100, "label": "Savings"},
+                {"id": 1, "value": 2300, "label": "Spending"},
+                {"id": 2, "value": 6100, "label": "Leftover"},
+            ],
+            "barLabels": ["Debt", "Networth", "Age"],
+            "barLabelName": "Most Significant Features",
+            "barYAxisName": "Risk",
+            "barSeries": [{"data": [4, 3, 6]}],
+            "lineLabels": [1, 2, 3, 4],
+            "lineXAxisName": "Weeks",
+            "lineYAxisName": "Gamble ($)",
+            "lineSeries": [
+                {"data": [2, 4, 6, 10], "area": True},
+                {"data": [0, 2, 4, 5], "area": True},
+            ],
+        }
+# Otherwise, we have user_data. Let's map it to the model's expected keys
+    # According to your snippet, the model expects:
+    # ['AGE', 'ASSET', 'SAVING', 'DEBT', 'MORTPAY', 'INCOME', 'NETWORTH']
+    new_user = {
+        "AGE": user_data.age,
+        "ASSET": user_data.assets,
+        "SAVING": user_data.savings * 12,
+        "DEBT": user_data.debt,
+        "MORTPAY": user_data.mortgage,
+        "INCOME": user_data.income * 12,
+        "NETWORTH": user_data.networth,
+    }
 
-    # Example of derived field: leftover = income - monthlySpending
-    leftover = 0
-    if user_data:
-        leftover = user_data.income - user_data.monthlySpending
+    # Convert to a DataFrame
+    df = pd.DataFrame([new_user])
 
-    # You can incorporate more logic to handle networth, mortgage, etc.
-    # For now, let's show how you'd pick them (or a default).
-    user_name = pick("name", "Guest")
-    proj_monthly_income = pick("income", 8500)
-    monthly_expenses = pick("monthlySpending", 2300)
-    user_dependents = pick("dependents", 0)
-    user_savings = pick("savings", 100)       # Hard-coded fallback
-    user_debt = pick("debt", 5000)
-    user_gamb_freq = pick("gamblingFrequency", "Unknown Frequency")
-    user_gamb_hist = pick("gamblingHistory", "No History Provided")
+    print(type(model))
+    prediction = model.predict(df)  # e.g. might return a list or array
 
-    # Build the final response
-    dashboard = {
-        "userName": user_name,
-        "projectedMonthlyIncome": proj_monthly_income,
-        "monthlyExpenses": monthly_expenses,
-        "dependents": user_dependents,
+    print(prediction)
+# We'll assume it's a single float or numeric for recommended gambling budget
+    recommended_budget = round(float(prediction[0]), 2)
+
+    # Example derived fields
+    leftover = user_data.income - user_data.monthlySpending
+
+    return {
+        "userName": user_data.name,
+        "projectedMonthlyIncome": user_data.income,
+        "monthlyExpenses": user_data.monthlySpending,
+        "dependents": user_data.dependents,
         "pros": [
             "High potential return",
-            f"Gambles: {user_gamb_freq}",
+            f"Gambles: {user_data.gamblingFrequency}",
             "Supports long-term goals"
         ],
         "cons": [
             "Potential loss of savings",
             "Requires consistent tracking",
-            user_gamb_hist,
+            user_data.gamblingHistory,
         ],
         "pieData": [
-            {"id": 0, "value": user_savings, "label": "Savings"},
-            {"id": 1, "value": user_debt,    "label": "Debt"},
-            {"id": 2, "value": leftover,     "label": "Leftover"},
+            {"id": 0, "value": user_data.savings, "label": "Savings"},
+            {"id": 1, "value": user_data.monthlySpending, "label": "Spending"},
+            {
+                "id": 2,
+                "value": leftover - user_data.savings if leftover > user_data.savings else 0,
+                "label": "Leftover",
+            },
         ],
-        "barLabels": ["A", "B", "C", "D", "E"],
+        "barLabels": ["Debt", "Networth", "Age"],
         "barLabelName": "Most Significant Features",
         "barYAxisName": "Risk",
-        "barSeries": [
-            {"data": [4, 3, 6, 2, 5]}
-        ],
+        "barSeries": [{"data": [4, 3, 6]}],
         "lineLabels": [1, 2, 3, 4],
         "lineXAxisName": "Weeks",
         "lineYAxisName": "Gamble ($)",
         "lineSeries": [
             {"data": [2, 4, 6, 10], "area": True},
-            {"data": [0, 2, 4, 5],  "area": True},
-        ],
-    }
-
-    return dashboard
+            {"data": [0, 2, 4, 5], "area": True},
+        ],    }
