@@ -16,7 +16,6 @@ export interface LineSeriesData {
 
 export interface DashboardData {
   userName: string;
-  betName: number;
   projectedMonthlyIncome: number;
   monthlyExpenses: number;
   dependents: number;

@@ -23,11 +23,11 @@ export default function BigNumbers(props: BigNumbersProps) {
           borderRadius: 2,
           p: 2,
           display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
+          flexDirection: "column", 
+          // Removed 'justifyContent: "center"' so the title stays at the top
         }}
       >
-        <Typography variant="h6" sx={{ color: theme.palette.primary.main }}>
+        <Typography variant="h6" sx={{ color: theme.palette.primary.main, mb: 2, mt: 1 }}>
           Financial Summary
         </Typography>
         <Typography variant="h4" sx={{ fontWeight: "bold" }}>

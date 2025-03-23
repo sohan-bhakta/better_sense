@@ -31,7 +31,7 @@ export default function DashboardPage() {
         variant="h4"
         sx={{ ml: "50px", mb: 2, color: "primary.main", fontWeight: 600 }}
       >
-        Welcome {data.userName}, here is your risk for your ${data.betName} bet.
+        Welcome {data.userName}, here is a better sense of your risk and wealth.
       </Typography>
 
       <Box

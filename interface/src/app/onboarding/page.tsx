@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Button,
@@ -10,57 +10,76 @@ import {
   useTheme,
 } from "@mui/material";
 
+// 1) Import `useRouter` from Next.js
+import { useRouter } from "next/navigation";
+
 export default function OnboardingPage() {
   const theme = useTheme();
+  const router = useRouter(); // 2) Initialize the router
   const [currentStep, setCurrentStep] = useState(0);
+
+  // Updated form data with name, dependents, monthlySpending, etc.
   const [formData, setFormData] = useState({
     name: "",
     age: "",
     income: "",
-    occupation: "",
-    education: "",
-    maritalStatus: "",
+    monthlySpending: "",
+    savings: "",
+    debt: "",
+    assets: "",
+    networth: "",
+    mortgage: "",
     dependents: "",
-    location: "",
-    hobbies: "",
+    gamblingFrequency: "",
     gamblingHistory: "",
   });
 
+  // 3 steps, 4 fields per step
   const steps = [
-    ["name", "age", "income", "occupation"],
-    ["education", "maritalStatus", "dependents", "location"],
-    ["hobbies", "gamblingHistory"],
+    // Step 1
+    ["name", "age", "income", "monthlySpending"],
+    // Step 2
+    ["savings", "debt", "assets", "networth"],
+    // Step 3
+    ["mortgage", "dependents", "gamblingFrequency", "gamblingHistory"],
   ];
 
+  // Update the labels to match your new fields
   const labels: Record<string, string> = {
-    name: "Name",
+    name: "Full Name",
     age: "Age",
-    income: "Income",
-    occupation: "Occupation",
-    education: "Education",
-    maritalStatus: "Marital Status",
+    income: "Monthly Income",
+    monthlySpending: "Monthly Spending",
+    savings: "Savings",
+    debt: "Debt",
+    assets: "Assets",
+    networth: "Net Worth",
+    mortgage: "Mortgage",
     dependents: "Number of Dependents",
-    location: "Location",
-    hobbies: "Hobbies",
+    gamblingFrequency: "How Often Do You Gamble?",
     gamblingHistory: "Gambling History (briefly describe)",
   };
 
+  // Handle input changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // Move to next step
   const handleNext = () => {
     if (currentStep < steps.length - 1) {
       setCurrentStep((prev) => prev + 1);
     }
   };
 
+  // Move back to previous step
   const handleBack = () => {
     if (currentStep > 0) {
       setCurrentStep((prev) => prev - 1);
     }
   };
 
+  // Final submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -72,6 +91,8 @@ export default function OnboardingPage() {
 
       if (!response.ok) throw new Error("Request failed");
 
+      // Step is now beyond the final step, 
+      // which triggers our success message + redirect.
       setCurrentStep(steps.length);
     } catch (err) {
       console.error(err);
@@ -80,6 +101,20 @@ export default function OnboardingPage() {
   };
 
   const isFinalStep = currentStep === steps.length;
+
+  // 3) Redirect to /dashboard after a short delay
+  useEffect(() => {
+    if (isFinalStep) {
+      // Show the success message for 2 seconds, then redirect
+      const timer = setTimeout(() => {
+        router.push("/dashboard");
+      }, 2000);
+
+      // Cleanup the timer if the component unmounts 
+      // or user somehow navigates away
+      return () => clearTimeout(timer);
+    }
+  }, [isFinalStep, router]);
 
   return (
     <Box
@@ -93,6 +128,7 @@ export default function OnboardingPage() {
         backgroundColor: theme.palette.background.default,
       }}
     >
+      {/* Header with Logo */}
       <Box sx={{ display: "flex", flexDirection: "row", alignItems: "center" }}>
         <Box
           component="img"
@@ -114,6 +150,8 @@ export default function OnboardingPage() {
           {isFinalStep ? "🎉 You're All Set!" : "BetterSense"}
         </Typography>
       </Box>
+
+      {/* Form Paper */}
       <Paper
         component="form"
         onSubmit={handleSubmit}
@@ -130,49 +168,55 @@ export default function OnboardingPage() {
         }}
       >
         {isFinalStep ? (
-  <Box sx={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 2 }}>
-    <Box
-      component="img"
-      src="./invest_2.png"
-      alt="Onboarding Illustration"
-      sx={{
-        width: 60,
-        height: 60,
-        objectFit: "contain",
-        borderRadius: 2,
-      }}
-    />
-    <Typography
-      variant="h6"
-      align="center"
-      sx={{ color: theme.palette.primary.main, fontWeight: 600 }}
-    >
-      🎉 You&apos;re All Set!
-    </Typography>
-  </Box>
-) : (
-  <Box sx={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 2 }}>
-    <Box
-      component="img"
-      src="./invest_4.png"
-      alt="Onboarding Illustration"
-      sx={{
-        width: 60,
-        height: 60,
-        objectFit: "contain",
-        borderRadius: 2,
-      }}
-    />
-    <Typography
-      variant="h6"
-      align="left"
-      sx={{ color: theme.palette.secondary.main, fontWeight: 600 }}
-    >
-      Let&apos;s start by your putting financial information.
-    </Typography>
-  </Box>
-)}
+          <Box
+            sx={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 2 }}
+          >
+            <Box
+              component="img"
+              src="./invest_2.png"
+              alt="Onboarding Illustration"
+              sx={{
+                width: 60,
+                height: 60,
+                objectFit: "contain",
+                borderRadius: 2,
+              }}
+            />
+            <Typography
+              variant="h6"
+              align="center"
+              sx={{ color: theme.palette.primary.main, fontWeight: 600 }}
+            >
+              🎉 You&apos;re All Set!  
+              <br />
+              (Redirecting to Dashboard...)
+            </Typography>
+          </Box>
+        ) : (
+          // If not final step, show the form fields
+          <Box sx={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 2 }}>
+            <Box
+              component="img"
+              src="./invest_4.png"
+              alt="Onboarding Illustration"
+              sx={{
+                width: 60,
+                height: 60,
+                objectFit: "contain",
+                borderRadius: 2,
+              }}
+            />
+            <Typography
+              variant="h6"
+              align="left"
+              sx={{ color: theme.palette.secondary.main, fontWeight: 600 }}
+            >
+              Let&apos;s start by putting in your financial information.
+            </Typography>
+          </Box>
+        )}
 
+        {/* Step Fields */}
         {!isFinalStep ? (
           <>
             {steps[currentStep].map((field) => (
@@ -183,10 +227,26 @@ export default function OnboardingPage() {
                 value={formData[field as keyof typeof formData]}
                 onChange={handleChange}
                 required
-                type={field === "age" || field === "income" ? "number" : "text"}
+                // numeric fields
+                type={
+                  [
+                    "age",
+                    "income",
+                    "monthlySpending",
+                    "savings",
+                    "debt",
+                    "assets",
+                    "networth",
+                    "mortgage",
+                    "dependents",
+                  ].includes(field)
+                    ? "number"
+                    : "text"
+                }
               />
             ))}
 
+            {/* Buttons: Back / Next or Submit */}
             <Box
               sx={{
                 display: "flex",
@@ -207,11 +267,7 @@ export default function OnboardingPage() {
                   Submit
                 </Button>
               ) : (
-                <Button
-                  variant="contained"
-                  onClick={handleNext}
-                  color="primary"
-                >
+                <Button variant="contained" onClick={handleNext} color="primary">
                   Next
                 </Button>
               )}
@@ -219,8 +275,7 @@ export default function OnboardingPage() {
           </>
         ) : (
           <Typography textAlign="center" mt={4} color="text.secondary">
-            Thank you for providing your information. You’ll be redirected to
-            your dashboard soon!
+            Thank you for providing your information.
           </Typography>
         )}
       </Paper>
