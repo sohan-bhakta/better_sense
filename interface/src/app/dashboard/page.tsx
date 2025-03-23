@@ -1,66 +1,73 @@
 "use client";
-
 import React, { useEffect, useState } from "react";
 import { Box, Typography } from "@mui/material";
+import { DashboardData } from "../types/dashboardData"; // Path to your interface
 import RiskCharts from "../components/RiskCharts";
 import BigNumbers from "../components/BigNumbers";
 import ProsConsList from "../components/ProsConsList";
-import { ChartData } from "chart.js";
-import { useUser } from "@auth0/nextjs-auth0/client";
-
-// Match the shape expected by RiskCharts
-interface ChartsData {
-  barData: ChartData<"bar">;
-  lineData: ChartData<"line">;
-  pieData: ChartData<"pie">;
-}
-
-interface RiskData {
-  pros: string[];
-  cons: string[];
-  bigNumbers: { label: string; value: number }[];
-  chartsData: ChartsData;
-}
 
 export default function DashboardPage() {
-
-    const { user, error, isLoading } = useUser();
-
-    
-
-  const [riskData, setRiskData] = useState<RiskData | null>(null);
+  const [data, setData] = useState<DashboardData | null>(null);
 
   useEffect(() => {
-    const fetchRiskData = async () => {
-      try {
-        const res = await fetch("/api/risk-analysis");
-        if (!res.ok) throw new Error("Failed fetching risk data");
-        const data: RiskData = await res.json();
-        setRiskData(data);
-      } catch (error) {
-        console.error(error);
-      }
-    };
-    fetchRiskData();
+    // Fetch from your Python backend
+    // e.g., fetch("http://localhost:8000/api/dashboard-data")
+    fetch("http://127.0.0.1:8000/api/dashboard-data")
+      .then((res) => res.json())
+      .then((json: DashboardData) => {
+        setData(json);
+      })
+      .catch((err) => console.error(err));
   }, []);
 
-  if (isLoading) return <p>Loading...</p>;
-    if (error) return <p>Error: {error.message}</p>;
-    if (!user) return <p>Unauthorized. Please <a href="/api/auth/login">login</a>.</p>;
-
-  if (!riskData) {
-    return <Typography>Loading risk data...</Typography>;
+  if (!data) {
+    // Optionally show a loading state
+    return <Typography>Loading...</Typography>;
   }
 
   return (
     <Box sx={{ p: 2 }}>
-      <Typography variant="h4" gutterBottom>
-      Welcome, {user.name}, here is your Risk Dashboard
+      <Typography
+        variant="h4"
+        sx={{ ml: "50px", mb: 2, color: "primary.main", fontWeight: 600 }}
+      >
+        Welcome {data.userName}, here is your risk for your ${data.betName} bet.
       </Typography>
 
-      <BigNumbers numbers={riskData.bigNumbers} />
-      <ProsConsList pros={riskData.pros} cons={riskData.cons} />
-      <RiskCharts chartsData={riskData.chartsData} />
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "row",
+          justifyContent: "center",
+          gap: 1,
+          mb: "8px",
+          height: "400px",
+          alignItems: "stretch",
+        }}
+      >
+        {/* Pass big number data to BigNumbers */}
+        <BigNumbers
+          projectedMonthlyIncome={data.projectedMonthlyIncome}
+          monthlyExpenses={data.monthlyExpenses}
+          dependents={data.dependents}
+        />
+
+        {/* Pass pros and cons data to ProsConsList */}
+        <ProsConsList pros={data.pros} cons={data.cons} />
+      </Box>
+
+      {/* Pass chart data to RiskCharts */}
+      <RiskCharts
+        pieData={data.pieData}
+        barLabels={data.barLabels}
+        barLabelName={data.barLabelName}
+        barYAxisName={data.barYAxisName}
+        barSeries={data.barSeries}
+        lineLabels={data.lineLabels}
+        lineXAxisName={data.lineXAxisName}
+        lineYAxisName={data.lineYAxisName}
+        lineSeries={data.lineSeries}
+      />
     </Box>
   );
 }

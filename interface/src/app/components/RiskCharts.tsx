@@ -1,110 +1,145 @@
 "use client";
 
 import React from "react";
-import { Box, Typography } from "@mui/material";
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  PointElement,
-  LineElement,
-  ArcElement,
-  ChartData,
-} from "chart.js";
-import { Bar, Line, Pie } from "react-chartjs-2";
+  Box,
+  Typography,
+  Paper,
+  useTheme,
+} from "@mui/material";
+import { PieChart } from "@mui/x-charts/PieChart";
+import { BarChart } from "@mui/x-charts/BarChart";
+import { LineChart } from "@mui/x-charts/LineChart";
+import {
+  PieData,
+  BarSeriesData,
+  LineSeriesData
+} from "../types/dashboardData";
 
-// Register chart.js components
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  PointElement,
-  LineElement,
-  ArcElement
-);
-
-// Define expected shape of chartsData
-interface ChartsData {
-  barData: ChartData<"bar">;
-  lineData: ChartData<"line">;
-  pieData: ChartData<"pie">;
+interface RiskChartsProps {
+  pieData: PieData[];
+  barLabels: string[];
+  barLabelName: string;
+  barYAxisName: string;
+  barSeries: BarSeriesData[];
+  lineLabels: number[];
+  lineXAxisName: string;
+  lineYAxisName: string;
+  lineSeries: LineSeriesData[];
 }
 
-interface Props {
-  chartsData: ChartsData;
-}
+export default function RiskCharts({
+  pieData,
+  barLabels,
+  barLabelName,
+  barYAxisName,
+  barSeries,
+  lineLabels,
+  lineXAxisName,
+  lineYAxisName,
+  lineSeries,
+}: RiskChartsProps) {
+  const theme = useTheme();
 
-export default function RiskCharts({ chartsData }: Props) {
+  function BasicPie() {
+    return (
+      <PieChart
+        series={[
+          {
+            data: pieData,
+          },
+        ]}
+        width={360}
+        height={215}
+      />
+    );
+  }
+
+  function BasicBars() {
+    // The bar chart with 5 bars
+    return (
+      <BarChart
+        xAxis={[
+          {
+            scaleType: "band",
+            data: barLabels,
+            label: barLabelName,
+          },
+        ]}
+        yAxis={[
+          {
+            position: "left",
+            label: barYAxisName,
+          },
+        ]}
+        series={barSeries}
+        width={375}
+        height={250}
+      />
+    );
+  }
+
+  function BasicLineChart() {
+    return (
+      <LineChart
+        xAxis={[
+          {
+            data: lineLabels,
+            label: lineXAxisName,
+          },
+        ]}
+        yAxis={[
+          {
+            position: "left",
+            label: lineYAxisName,
+          },
+        ]}
+        series={lineSeries}
+        width={375}
+        height={250}
+      />
+    );
+  }
+
+  const chartConfigs = [
+    { title: "Monthly Income (Pie Chart)", component: <BasicPie /> },
+    {
+      title: "Highest Risk Factors (Top 5)",
+      component: <BasicBars />,
+    },
+    { title: "Projected Risk Range (Line Chart)", component: <BasicLineChart /> },
+  ];
+
   return (
-    <Box sx={{ mt: 4 }}>
-      <Typography variant="h5" gutterBottom>
-        Risk Charts
-      </Typography>
-
-      {/* Bar Chart */}
-      <Box sx={{ my: 2 }}>
-        <Typography variant="h6">Bar Chart</Typography>
-        <Bar data={chartsData.barData} />
-      </Box>
-
-      {/* Line Chart */}
-      <Box sx={{ my: 2 }}>
-        <Typography variant="h6">Line Chart</Typography>
-        <Line data={chartsData.lineData} />
-      </Box>
-
-      {/* Pie Chart */}
-      <Box sx={{ my: 2 }}>
-        <Typography variant="h6">Pie Chart</Typography>
-        <Pie data={chartsData.pieData} />
-      </Box>
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "row",
+        flexWrap: "wrap",
+        justifyContent: "center",
+        gap: 1,
+      }}
+    >
+      {chartConfigs.map(({ title, component }) => (
+        <Paper
+          key={title}
+          elevation={3}
+          sx={{
+            p: 1,
+            width: 375,
+            backgroundColor: theme.palette.background.paper,
+            borderRadius: 2,
+          }}
+        >
+          <Typography
+            variant="h6"
+            sx={{ color: theme.palette.primary.main, mb: 1, ml: 5 }}
+          >
+            {title}
+          </Typography>
+          {component}
+        </Paper>
+      ))}
     </Box>
   );
-}
-
-// ✅ Example mock data for testing/demo usage
-const mockData: ChartsData = {
-  barData: {
-    labels: ["A", "B", "C"],
-    datasets: [
-      {
-        label: "Dataset 1",
-        data: [30, 50, 20],
-        backgroundColor: "rgba(75,192,192,0.4)",
-      },
-    ],
-  },
-  lineData: {
-    labels: ["Jan", "Feb", "Mar", "Apr"],
-    datasets: [
-      {
-        label: "Risk Over Time",
-        data: [10, 40, 20, 60],
-        borderColor: "blue",
-        backgroundColor: "rgba(0,0,255,0.1)",
-        tension: 0.3,
-      },
-    ],
-  },
-  pieData: {
-    labels: ["High Risk", "Medium Risk", "Low Risk"],
-    datasets: [
-      {
-        data: [30, 20, 50],
-        backgroundColor: ["red", "orange", "green"],
-      },
-    ],
-  },
-};
-
-// ✅ Optional exportable wrapper for direct use on a page
-export function DemoRiskCharts() {
-  return <RiskCharts chartsData={mockData} />;
 }

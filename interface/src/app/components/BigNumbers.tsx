@@ -1,27 +1,54 @@
-// components/BigNumbers.tsx
 "use client";
-
 import React from "react";
-import { Box, Typography } from "@mui/material";
+import { Box, Typography, Paper, useTheme } from "@mui/material";
 
-interface BigNumberItem {
-  label: string;
-  value: number;
+interface BigNumbersProps {
+  projectedMonthlyIncome: number;
+  monthlyExpenses: number;
+  dependents: number;
 }
 
-interface Props {
-  numbers: BigNumberItem[];
-}
+export default function BigNumbers(props: BigNumbersProps) {
+  const theme = useTheme();
+  const { projectedMonthlyIncome, monthlyExpenses, dependents } = props;
 
-export default function BigNumbers({ numbers }: Props) {
   return (
-    <Box sx={{ display: "flex", gap: 4, my: 2 }}>
-      {numbers.map((item, index) => (
-        <Box key={index} sx={{ textAlign: "center" }}>
-          <Typography variant="h5" component="div">{item.label}</Typography>
-          <Typography variant="h3" component="div">{item.value}</Typography>
-        </Box>
-      ))}
+    <Box sx={{ display: "flex", height: "100%", gap: 2 }}>
+      <Paper
+        elevation={3}
+        sx={{
+          width: "375px",
+          height: "100%",
+          backgroundColor: theme.palette.background.paper,
+          borderRadius: 2,
+          p: 2,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+        }}
+      >
+        <Typography variant="h6" sx={{ color: theme.palette.primary.main }}>
+          Financial Summary
+        </Typography>
+        <Typography variant="h4" sx={{ fontWeight: "bold" }}>
+          ${projectedMonthlyIncome}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Projected Monthly Income
+        </Typography>
+        <Typography variant="h4" sx={{ fontWeight: "bold", color: theme.palette.error.main }}>
+          ${monthlyExpenses}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Monthly Revolving Payments (Expenses)
+        </Typography>
+        <Typography variant="h4" sx={{ fontWeight: "bold", color: theme.palette.error.main }}>
+          {dependents}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Number of Dependents
+        </Typography>
+      </Paper>
     </Box>
   );
 }

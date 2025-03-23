@@ -1,12 +1,28 @@
-// app/layout.tsx
 "use client";
 
 import React from "react";
-import { createTheme, ThemeProvider } from "@mui/material/styles";
+import { createTheme, ThemeProvider, CssBaseline } from "@mui/material";
 import { UserProvider } from "@auth0/nextjs-auth0/client";
 
 const theme = createTheme({
-  // Customize your MUI theme here as needed
+  palette: {
+    mode: 'light',
+    primary: {
+      main: "#04453c",
+    },
+    secondary: {
+      main: "#65b79a",
+    },
+    background: {
+      default: "#dddddd",
+    },
+  },
+  typography: {
+    fontFamily: `'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif`,
+    h6: {
+      fontWeight: 600,
+    },
+  },
 });
 
 export default function RootLayout({
@@ -17,12 +33,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <ThemeProvider theme={theme}>
         <UserProvider>
-          {children}
-          </UserProvider>
-        </ThemeProvider>
-
+          <ThemeProvider theme={theme}>
+            <CssBaseline /> 
+            {children}
+          </ThemeProvider>
+        </UserProvider>
       </body>
     </html>
   );
