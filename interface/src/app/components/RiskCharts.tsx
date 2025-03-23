@@ -102,12 +102,12 @@ export default function RiskCharts({
   }
 
   const chartConfigs = [
-    { title: "Monthly Income (Pie Chart)", component: <BasicPie /> },
+    { title: "Full Monthly Income", component: <BasicPie /> },
     {
       title: "Highest Risk Factors (Top 5)",
       component: <BasicBars />,
     },
-    { title: "Projected Risk Range (Line Chart)", component: <BasicLineChart /> },
+    { title: "Projected Risk Range (March)", component: <BasicLineChart /> },
   ];
 
   return (
